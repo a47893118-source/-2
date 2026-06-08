@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Chess - Play against Stockfish</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,700;1,700&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- CSS stylesheet -->
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Main Game Area -->
+        <main class="game-area">
+            
+            <!-- Opponent Panel (Top) -->
+            <div class="player-panel opponent-panel">
+                <div class="player-info">
+                    <div class="avatar ai-avatar">
+                        <i data-lucide="cpu"></i>
+                    </div>
+                    <div class="player-details">
+                        <span class="player-name" id="opponent-name">컴퓨터 (보통)</span>
+                        <div class="material-advantage" id="opponent-advantage"></div>
+                    </div>
+                </div>
+                <!-- Captured pieces by opponent -->
+                <div class="captured-pieces" id="opponent-captured"></div>
+            </div>
+
+            <!-- Board Container -->
+            <div class="board-container">
+                <div class="chessboard" id="board"></div>
+                
+                <!-- Game Over Overlay -->
+                <div class="overlay hidden" id="game-over-overlay">
+                    <div class="modal-content">
+                        <h2 id="game-over-title">체크메이트!</h2>
+                        <p id="game-over-desc">흑이 승리하였습니다.</p>
+                        <button class="btn btn-primary" id="restart-btn-modal">
+                            <i data-lucide="rotate-ccw"></i> 다시 시작하기
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Promotion Choice Overlay -->
+                <div class="overlay hidden" id="promotion-overlay">
+                    <div class="promotion-modal">
+                        <h3>폰 승급 선택</h3>
+                        <div class="promotion-choices">
+                            <div class="promo-choice" data-piece="q">
+                                <img src="" alt="Queen" id="promo-q">
+                            </div>
+                            <div class="promo-choice" data-piece="r">
+                                <img src="" alt="Rook" id="promo-r">
+                            </div>
+                            <div class="promo-choice" data-piece="b">
+                                <img src="" alt="Bishop" id="promo-b">
+                            </div>
+                            <div class="promo-choice" data-piece="n">
+                                <img src="" alt="Knight" id="promo-n">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- User Panel (Bottom) -->
+            <div class="player-panel user-panel">
+                <div class="player-info">
+                    <div class="avatar user-avatar">
+                        <i data-lucide="user"></i>
+                    </div>
+                    <div class="player-details">
+                        <span class="player-name" id="user-name">플레이어</span>
+                        <div class="material-advantage" id="user-advantage"></div>
+                    </div>
+                </div>
+                <!-- Captured pieces by user -->
+                <div class="captured-pieces" id="user-captured"></div>
+            </div>
+
+        </main>
+
+        <!-- Sidebar Area (Controls, Settings, History) -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h1 class="logo">
+                    <span class="logo-chess">CHESS</span><span class="logo-ai">.AI</span>
+                </h1>
+                <span class="logo-subtitle">DeepMind Antigravity Edition</span>
+            </div>
+
+            <div class="panel-container">
+                
+                <!-- Setup Screen -->
+                <div class="panel" id="setup-panel">
+                    <div class="panel-body">
+                        <h2>새 게임 설정</h2>
+                        
+                        <!-- Color Select -->
+                        <div class="setup-group">
+                            <label>플레이어 색상</label>
+                            <div class="color-selector">
+                                <button class="color-btn active" data-color="w" title="백 (White)">
+                                    <div class="color-preview white"></div>
+                                    <span>백</span>
+                                </button>
+                                <button class="color-btn" data-color="b" title="흑 (Black)">
+                                    <div class="color-preview black"></div>
+                                    <span>흑</span>
+                                </button>
+                                <button class="color-btn" data-color="random" title="무작위 (Random)">
+                                    <div class="color-preview random">
+                                        <div class="split-white"></div>
+                                        <div class="split-black"></div>
+                                    </div>
+                                    <span>무작위</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Difficulty Select -->
+                        <div class="setup-group">
+                            <label>AI 난이도</label>
+                            <div class="difficulty-selector">
+                                <button class="diff-btn" data-diff="easy">
+                                    <span class="diff-level">쉬움</span>
+                                    <span class="diff-desc">초보자용 (레이팅 ~800)</span>
+                                </button>
+                                <button class="diff-btn active" data-diff="medium">
+                                    <span class="diff-level">보통</span>
+                                    <span class="diff-desc">일반적인 대국 (레이팅 ~1500)</span>
+                                </button>
+                                <button class="diff-btn" data-diff="hard">
+                                    <span class="diff-level">어려움</span>
+                                    <span class="diff-desc">마스터 수준 (레이팅 ~2200)</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Engine Status -->
+                        <div class="engine-status-box">
+                            <div class="status-indicator online" id="engine-indicator"></div>
+                            <span id="engine-status-text">Stockfish 엔진 로딩 중...</span>
+                        </div>
+
+                        <button class="btn btn-primary btn-large" id="start-game-btn">
+                            <i data-lucide="play"></i> 게임 시작하기
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Active Game Screen -->
+                <div class="panel hidden" id="game-panel">
+                    <div class="panel-body flex-column">
+                        
+                        <!-- Status Bar -->
+                        <div class="game-status-bar" id="game-status-bar">
+                            <span class="status-dot active" id="turn-dot"></span>
+                            <span class="status-msg" id="status-msg">백의 차례입니다</span>
+                        </div>
+
+                        <!-- Move History -->
+                        <div class="move-history-container">
+                            <h3>기보 (Move Log)</h3>
+                            <div class="move-history-scroll" id="history-scroll">
+                                <table class="move-history-table">
+                                    <tbody id="move-history-body">
+                                        <!-- Moves will be appended here -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Game Buttons -->
+                        <div class="game-action-buttons">
+                            <button class="btn btn-secondary" id="undo-btn" title="한 수 무르기">
+                                <i data-lucide="undo-2"></i>
+                                <span>무르기</span>
+                            </button>
+                            <button class="btn btn-secondary" id="flip-btn" title="체스판 회전">
+                                <i data-lucide="refresh-cw"></i>
+                                <span>회전</span>
+                            </button>
+                            <button class="btn btn-secondary btn-danger" id="resign-btn" title="기권하기">
+                                <i data-lucide="flag"></i>
+                                <span>기권</span>
+                            </button>
+                        </div>
+
+                        <button class="btn btn-outline btn-large" id="new-game-btn">
+                            <i data-lucide="plus"></i> 새 게임 시작
+                        </button>
+
+                    </div>
+                </div>
+
+            </div>
+        </aside>
+    </div>
+
+    <!-- Load Chess.js from cdnjs -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+    <!-- Load custom app scripts -->
+    <script src="sounds.js"></script>
+    <script src="fallbackAI.js"></script>
+    <script src="stockfishAI.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
